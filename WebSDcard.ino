@@ -79,6 +79,7 @@ void setup(){
     }
   
     Serial.println("Connected to WiFi");
+    Serial.println(WiFi.localIP());
 
     configTime(utcOffsetInSeconds, 0, ntpServer);
     while (!time(nullptr)) {
