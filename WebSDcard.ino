@@ -35,8 +35,8 @@ String readHtmlFromSD(const char *filePath) {
     return content;
 }
 
-const char *ssid = "cilab_internal";
-const char *password = "cilabwifi";
+const char *ssid = "唐崇祐的iPhone";
+const char *password = "cs933600";
 const char *ntpServer = "pool.ntp.org";
 const long utcOffsetInSeconds = 28800;
 
