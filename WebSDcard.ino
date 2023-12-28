@@ -14,10 +14,42 @@
 #include <time.h>
 #include <HTTPClient.h>
 #include <ESPAsyncWebSrv.h>
+#include <ModbusIP_ESP8266.h>
 #include "FS.h"
 #include "SD.h"
 #include "SPI.h"
 #include "FileOperations.h"
+
+// power
+const int PV_REG = 9;               // Modbus Hreg Offset
+const int LOAD_REG = 2181;
+const int FIR_ORDER = 100;
+
+IPAddress remote(140, 115, 65, 193);  // Address of Modbus Slave device
+const int LOOP_COUNT = 10;
+
+ModbusIP mb;  //ModbusIP object
+int fir_filter[FIR_ORDER]={0};
+
+float solar_flaten(float input_mppt)
+{
+  int i;
+  float temp=0;
+  for(i=FIR_ORDER-1;i>0;i--)
+  {
+      fir_filter[i]=fir_filter[i-1];
+  }
+      
+  fir_filter[0]=input_mppt;
+
+  for(i =0;i<FIR_ORDER;i++)
+    temp+= fir_filter[i]*(1.0/FIR_ORDER);
+    /*
+  Serial.print(" temp:");
+  Serial.print(temp);*/
+  return temp;
+}
+// end
 
 String readHtmlFromSD(const char *filePath) {
     File file = SD.open(filePath);
@@ -130,7 +162,7 @@ void setup(){
     // 定義新的路由，處理讀取 button_log.txt 的請求
     server.on("/read_log", HTTP_GET, [](AsyncWebServerRequest *request) {
         // 讀取 /button_log.txt 的內容
-        String logContent = readHtmlFromSD("/button_log.txt");
+        String logContent = readHtmlFromSD("/PV_power.txt");
 
         // 替換換行字元為 HTML 的換行標籤
         //logContent.replace("\n", "<br>");
@@ -147,8 +179,65 @@ char CMD[100];
 char fileName[90];
 char fullPath[90];
 
+// power
+uint16_t pv_power = 0;
+uint8_t show = LOOP_COUNT;
+uint16_t load_power =0;
+uint16_t flatten_power = 0;
+// end
+
 void loop(){
+  if (mb.isConnected(remote)) {   // Check if connection to Modbus Slave is established
+    mb.readHreg(remote, PV_REG, &pv_power);  // Initiate Read Coil from Modbus Slave
+    mb.readHreg(remote, LOAD_REG, &load_power);
+  } else {
+    mb.connect(remote);           // Try to connect if no connection
+  }
+  mb.task();                      // Common local Modbus task
+  flatten_power = solar_flaten(pv_power*0.1);
+  delay(200);                     // Pulling interval
+  if (!show--) {                   // Display Slave register value one time per second (with default settings)
+    Serial.print("PV_power:");
+    Serial.print(pv_power*0.1);
+    Serial.print(" Load_power");
+    Serial.print(load_power);
+    Serial.print(" Flatten_power");
+
+   // 在 SD 卡上紀錄按鈕被按下
+        File file = SD.open("/PV_power.txt", FILE_APPEND);
+        if (file) {
+            // 獲取當前時間戳記
+            time_t now = time(nullptr);
+            
+            // 將時間轉換為可讀格式
+            char formattedTime[20]; // 預留足夠的空間
+            strftime(formattedTime, sizeof(formattedTime), "%Y-%m-%d %H:%M:%S", localtime(&now));
+
+            // 將時間戳記和內容一併寫入文件
+            //int randomNumber = random(4001);
+            //String randomString = String(randomNumber);
+            file.print(formattedTime);
+            file.print(" - ");
+            file.println(pv_power*0.1);
+            file.close();
+            Serial.println("Log written to SD card");
+        } else {
+            Serial.println("Failed to open file on SD card");
+        }
+    
+    /*
+    for(int i = 0 ; i < 25 ; i++)
+    {
+        Serial.print("filter:");
+        Serial.println(fir_filter[i]);
+    }*/
+      
+    Serial.println(flatten_power);
+    show = LOOP_COUNT;
+  }
   
+
+  /*
   // 等待輸入指令
   Serial.print("command:~$ ");
   while (Serial.available() == 0) {
@@ -235,4 +324,5 @@ void loop(){
   // reset str
   memset(CMD, 0, sizeof(CMD));
   memset(fileName, 0, sizeof(fileName));
+  */
 }

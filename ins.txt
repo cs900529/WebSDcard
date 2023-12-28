@@ -1,0 +1,74 @@
+/*listDir(SD, "/", 0);
+    createDir(SD, "/mydir");
+    listDir(SD, "/", 0);
+    removeDir(SD, "/mydir");
+    listDir(SD, "/", 2);
+    writeFile(SD, "/hello.txt", "Hello ");
+    appendFile(SD, "/hello.txt", "World!\n");
+    readFile(SD, "/hello.txt");
+    deleteFile(SD, "/foo.txt");
+    renameFile(SD, "/hello.txt", "/foo.txt");
+    readFile(SD, "/foo.txt");
+    testFileIO(SD, "/test.txt");
+    Serial.printf("Total space: %lluMB\n", SD.totalBytes() / (1024 * 1024));
+    Serial.printf("Used space: %lluMB\n", SD.usedBytes() / (1024 * 1024));*/
+
+    //Serial.setTimeout(10);
+
+<script>
+    // 當按鈕被點擊時，發送請求讀取 log 內容
+    $('#buttonR').click(function() {
+        $.get('/read_log', function(data) {
+            // 將讀取到的 log 內容顯示在網頁上
+            $('#log-content').html(data);
+
+            // 解析時間和數字
+            var lines = data.split('\n');
+            var labels = [];
+            var values = [];
+
+            for (var i = 0; i < lines.length; i++) {
+                var parts = lines[i].split(' - ');
+                if (parts.length === 2) {
+                    labels.push(parts[0]);
+                    values.push(parseInt(parts[1]));
+                }
+            }
+
+            // 繪製折線圖
+            drawLineChart(labels, values);
+        });
+    });
+
+    // 繪製折線圖的函數
+    function drawLineChart(labels, values) {
+        var ctx = document.getElementById('lineChart').getContext('2d');
+
+        var myLineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Values',
+                    data: values,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom'
+                    },
+                    y: {
+                        min: 0
+                    }
+                }
+            }
+        });
+    }
+</script>
