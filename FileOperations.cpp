@@ -253,7 +253,7 @@ void removeFirstEntry(const char *filePath) {
     file.close();
 }
 
-void logFile(fs::FS &fs, const char * path, const uint16_t message, const char * formattedTime){
+void logFile(fs::FS &fs, const char * path, const uint16_t pv_power, const uint16_t load_power, const uint16_t flatten_power, const char * formattedTime){
   // 檢查檔案大小
   File file = SD.open(path, FILE_READ);
   if (file && file.size() > 1500){
@@ -268,7 +268,11 @@ void logFile(fs::FS &fs, const char * path, const uint16_t message, const char *
     // 將時間戳記和內容一併寫入文件
     file.print(formattedTime);
     file.print(" - ");
-    file.println(message);
+    file.print(pv_power);
+    file.print(" - ");
+    file.print(load_power);
+    file.print(" - ");
+    file.println(flatten_power);
     file.close();
     Serial.println("Log written to SD card");
     } else {

@@ -59,5 +59,5 @@ int demand_response(int load_power) {
       return 0;
     }
   }
-  return 0;
+  return 2;
 }

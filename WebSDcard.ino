@@ -37,6 +37,12 @@ IPAddress remote(140, 115, 65, 193);
 // ModbusIP object
 ModbusIP mb;
 
+uint16_t pv_power = 0;
+uint16_t load_power =0;
+uint16_t flatten_power = 0;
+uint16_t demand = 0;
+
+// Internet config
 const char *ssid = "cilab_internal";
 const char *password = "cilabwifi";
 const char *ntpServer = "pool.ntp.org";
@@ -83,13 +89,18 @@ void setup(){
   
     Serial.println("Connected to WiFi");
     Serial.println(WiFi.localIP());
-
+    
+    // connect to ntpServer
     configTime(utcOffsetInSeconds, 0, ntpServer);
     while (!time(nullptr)) {
       delay(1000);
       Serial.println("Waiting for time sync...");
     }
     Serial.println("Time synced successfully");
+
+    // Modbus client
+    mb.client();
+    mb.connect(remote);
 
     // 定義路由
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -99,62 +110,58 @@ void setup(){
        // 發送 HTML WEB
        request->send(200, "text/html", htmlContent);
     });
-  
-    // 定義第二個路由，處理按鍵
-    server.on("/button_pressed", HTTP_GET, [](AsyncWebServerRequest *request){
-        // 按鈕被點擊
-        Serial.println("Button pressed!");
-  
-        // 在 SD 卡上紀錄按鈕被按下
-        File file = SD.open("/button_log.txt", FILE_APPEND);
-        if (file) {
-            // 獲取當前時間戳記
-            time_t now = time(nullptr);
-            
-            // 將時間轉換為可讀格式
-            char formattedTime[20]; // 預留足夠的空間
-            strftime(formattedTime, sizeof(formattedTime), "%Y-%m-%d %H:%M:%S", localtime(&now));
-
-            // 將時間戳記和內容一併寫入文件
-            int randomNumber = random(4001);
-            String randomString = String(randomNumber);
-            file.print(formattedTime);
-            file.print(" - ");
-            file.println(randomString);
-            file.close();
-            Serial.println("Log written to SD card");
-        } else {
-            Serial.println("Failed to open file on SD card");
-        }
-  
-        request->send(200, "text/plain", "Button pressed!");
-    });
 
     // 定義新的路由，處理讀取 button_log.txt 的請求
     server.on("/read_log", HTTP_GET, [](AsyncWebServerRequest *request) {
         // 讀取 /button_log.txt 的內容
-        String logContent = readLatestLogs("/load_power.txt", 30);
+        String logContent = readLatestLogs("/power.txt", 30);
         
         // 發送內容給客戶端
         request->send(200, "text/plain", logContent);
+    });
+
+    // 定義新的路由，處理 modbus control flatten 的請求
+    server.on("/ModbusFlatten", HTTP_GET, [](AsyncWebServerRequest *request) {
+        Flatten_Enable = 1;
+
+        request->send(200, "text/plain", "Modbus flatten enabled");
+    });
+
+    // 定義新的路由，處理 modbus control demand 的請求
+    server.on("/ModbusDemand", HTTP_GET, [](AsyncWebServerRequest *request) {
+        Demand_Enable = 1;
+
+        request->send(200, "text/plain", "Modbus demand enabled");
+    });
+    
+    // 定義新的路由，處理 modbus control disable 的請求
+    server.on("/ModbusDisable", HTTP_GET, [](AsyncWebServerRequest *request) {
+       Flatten_Enable = 0;
+       Demand_Enable = 0;
+       reset();
+       demand = 0;
+       flatten_power = 0;
+       while(!mb.isConnected(remote)){
+        mb.connect(remote);
+        delay(1000);
+       }
+       mb.writeHreg(remote, DEMAND_REG, &demand);
+       delay(20);
+       mb.writeHreg(remote, OUTPUT_POWER_REG, &flatten_power);
+       delay(20);
+       Serial.println("!!disable!!");
+
+       request->send(200, "text/plain", "Modbus disable");
     });
   
     // 啟動 server
     server.begin();
 
-    // Modbus client
-    mb.client();
-    mb.connect(remote);
 }
 
 char CMD[100];
 char fileName[90];
 char fullPath[90];
-
-uint16_t pv_power = 0;
-uint16_t load_power =0;
-uint16_t flatten_power = 0;
-uint16_t demand = 0;
 
 void loop(){
   if (mb.isConnected(remote)) {   // Check if connection to Modbus Slave is established
@@ -185,8 +192,10 @@ void loop(){
   
   if (Demand_Enable) {
     demand = demand_response(load_power);
-    if (demand == 1){
-      mb.writeHreg(remote, DEMAND_REG, &demand);
+    if (demand == 2){
+      Serial.println("pass");
+    } else{
+      mb.writeHreg(remote, DEMAND_REG, &demand); // 1 for enable, 0 for disable
       delay(20);
     }
   }
@@ -205,11 +214,9 @@ void loop(){
   char formattedTime[20]; // 預留足夠的空間
   strftime(formattedTime, sizeof(formattedTime), "%Y-%m-%d %H:%M:%S", localtime(&now));
 
-  logFile(SD, "/PV_power.txt", pv_power*0.1, formattedTime);
-  logFile(SD, "/load_power.txt", load_power, formattedTime);
-  logFile(SD, "/flatten_power.txt", flatten_power, formattedTime);
+  logFile(SD, "/power.txt", pv_power*0.1, load_power, flatten_power, formattedTime);
     
-  delay(2000);                     // Pulling interval
+  delay(1000);                     // Pulling interval
   
   if (Serial.available()) {
     // 讀取輸入的指令，最多讀取 99 個字符，以保留一個位置給 null
@@ -232,9 +239,11 @@ void loop(){
        Flatten_Enable = 0;
        Demand_Enable = 0;
        reset();
-       flatten_power = 0;
        demand = 0;
+       flatten_power = 0;
        mb.writeHreg(remote, DEMAND_REG, &demand);
+       delay(20);
+       mb.writeHreg(remote, OUTPUT_POWER_REG, &flatten_power);
        delay(20);
        
     } else if (strncmp(CMD, "ls", 2) == 0) { // listDir

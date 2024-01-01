@@ -17,6 +17,6 @@ void testFileIO(fs::FS &fs, const char * path);
 String readHtmlFromSD(const char *filePath);
 String readLatestLogs(const char *filename, size_t numLines);
 void removeFirstEntry(const char *filePath);
-void logFile(fs::FS &fs, const char * path, const uint16_t message, const char * formattedTime);
+void logFile(fs::FS &fs, const char * path, const uint16_t pv_power, const uint16_t load_power, const uint16_t flatten_power, const char * formattedTime);
 
 #endif
