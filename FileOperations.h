@@ -14,5 +14,9 @@ void appendFile(fs::FS &fs, const char * path, const char * message);
 void renameFile(fs::FS &fs, const char * path1, const char * path2);
 void deleteFile(fs::FS &fs, const char * path);
 void testFileIO(fs::FS &fs, const char * path);
+String readHtmlFromSD(const char *filePath);
+String readLatestLogs(const char *filename, size_t numLines);
+void removeFirstEntry(const char *filePath);
+void logFile(fs::FS &fs, const char * path, const uint16_t message, const char * formattedTime);
 
 #endif

@@ -156,3 +156,122 @@ void testFileIO(fs::FS &fs, const char * path){
     Serial.printf("%u bytes written for %u ms\n", 2048 * 512, end);
     file.close();
 }
+
+String readHtmlFromSD(const char *filePath) {
+    File file = SD.open(filePath);
+    String content = "";
+
+    if (file) {
+        while (file.available()) {
+        content += (char)file.read();
+        }
+        file.close();
+    } else {
+        Serial.println("Failed to open file on SD card");
+    }
+
+    return content;
+}
+
+// 讀取檔案的函式，僅讀取最新的50筆資料
+String readLatestLogs(const char *filePath, size_t numberOfLines) {
+    File file = SD.open(filePath, FILE_READ);
+
+    if (!file) {
+        // 如果檔案無法打開，返回空字串或一個錯誤訊息
+        return "Error opening file";
+    }
+
+    // 移至檔案結尾
+    file.seek(0, SeekEnd);
+
+    // 取得檔案大小
+    size_t fileSize = file.size();
+
+    // 計算需要讀取的位置
+    size_t position = fileSize;
+    size_t linesRead = 0;
+
+    // 用來暫存讀取的內容
+    String logContent = "";
+
+    // 一次讀取一個字元，直到讀取到指定行數或到檔案開頭
+    while (position > 0 && linesRead < numberOfLines) {
+        position--;
+        file.seek(position, SeekSet);
+
+        char currentChar = file.read();
+        if (currentChar == '\n') {
+            // 如果是換行符號，增加已讀行數
+            linesRead++;
+        }
+
+        // 將讀取到的字元插入到字串的最前面
+        logContent = currentChar + logContent;
+    }
+
+    file.close();
+
+    return logContent;
+}
+
+void removeFirstEntry(const char *filePath) {
+    // 開啟檔案以進行讀寫
+    File file = SD.open(filePath, FILE_READ);
+
+    if (!file) {
+        Serial.println("Error opening file");
+        return;
+    }
+
+    // 找到第一筆數據的結束位置，即該行的換行符號 '\n'
+    while (file.available() && file.read() != '\n') {}
+
+    // 這時 file 指標已經移到第二筆數據的位置
+
+    // 讀取剩餘的檔案內容
+    String remainingContent = "";
+    while (file.available()) {
+        remainingContent += (char)file.read();
+    }
+
+    // 關閉檔案
+    file.close();
+
+    // 開啟檔案以進行寫入（清空原有內容）
+    file = SD.open(filePath, FILE_WRITE);
+
+    if (!file) {
+        Serial.println("Error opening file for writing");
+        return;
+    }
+
+    // 寫入剩餘的檔案內容
+    file.print(remainingContent);
+
+    // 關閉檔案
+    file.close();
+}
+
+void logFile(fs::FS &fs, const char * path, const uint16_t message, const char * formattedTime){
+  // 檢查檔案大小
+  File file = SD.open(path, FILE_READ);
+  if (file && file.size() > 1500){
+    removeFirstEntry(path);
+  }
+  file.close();
+  
+  // 將數據紀錄於 SD 卡
+  file = SD.open(path, FILE_APPEND);
+  if (file) {
+    Serial.println(file.size());
+    // 將時間戳記和內容一併寫入文件
+    file.print(formattedTime);
+    file.print(" - ");
+    file.println(message);
+    file.close();
+    Serial.println("Log written to SD card");
+    } else {
+      Serial.println("Failed to open file on SD card");
+    }
+}
