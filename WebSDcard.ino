@@ -114,7 +114,7 @@ void setup(){
     // 定義新的路由，處理讀取 button_log.txt 的請求
     server.on("/read_log", HTTP_GET, [](AsyncWebServerRequest *request) {
         // 讀取 /button_log.txt 的內容
-        String logContent = readLatestLogs("/power.txt", 30);
+        String logContent = readLatestLogs("/power.txt", 50);
         
         // 發送內容給客戶端
         request->send(200, "text/plain", logContent);

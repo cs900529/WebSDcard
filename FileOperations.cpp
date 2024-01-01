@@ -256,7 +256,7 @@ void removeFirstEntry(const char *filePath) {
 void logFile(fs::FS &fs, const char * path, const uint16_t pv_power, const uint16_t load_power, const uint16_t flatten_power, const char * formattedTime){
   // 檢查檔案大小
   File file = SD.open(path, FILE_READ);
-  if (file && file.size() > 1500){
+  if (file && file.size() > 2000){
     removeFirstEntry(path);
   }
   file.close();
