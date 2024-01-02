@@ -279,3 +279,23 @@ void logFile(fs::FS &fs, const char * path, const uint16_t pv_power, const uint1
       Serial.println("Failed to open file on SD card");
     }
 }
+
+void logHistory(fs::FS &fs, const char * path, const uint16_t pv_power, const uint16_t load_power, const uint16_t flatten_power, const char * formattedTime){
+  // 將數據紀錄於 SD 卡
+  File file = SD.open(path, FILE_APPEND);
+  if (file) {
+    Serial.println(file.size());
+    // 將時間戳記和內容一併寫入文件
+    file.print(formattedTime);
+    file.print(" - ");
+    file.print(pv_power);
+    file.print(" - ");
+    file.print(load_power);
+    file.print(" - ");
+    file.println(flatten_power);
+    file.close();
+    Serial.println("Log written to SD card");
+    } else {
+      Serial.println("Failed to open file on SD card");
+    }
+}

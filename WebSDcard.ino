@@ -43,8 +43,8 @@ uint16_t flatten_power = 0;
 uint16_t demand = 0;
 
 // Internet config
-const char *ssid = "cilab_internal";
-const char *password = "cilabwifi";
+const char *ssid = "唐崇祐的iPhone";
+const char *password = "cs933600";
 const char *ntpServer = "pool.ntp.org";
 const long utcOffsetInSeconds = 28800;
 
@@ -162,6 +162,7 @@ void setup(){
 char CMD[100];
 char fileName[90];
 char fullPath[90];
+int countHistory = 0;
 
 void loop(){
   if (mb.isConnected(remote)) {   // Check if connection to Modbus Slave is established
@@ -212,9 +213,35 @@ void loop(){
     
   // 將時間轉換為可讀格式
   char formattedTime[20]; // 預留足夠的空間
+  char subString[3];
+  char date[12];
   strftime(formattedTime, sizeof(formattedTime), "%Y-%m-%d %H:%M:%S", localtime(&now));
 
-  logFile(SD, "/power.txt", pv_power*0.1, load_power, flatten_power, formattedTime);
+  if (!(strncmp(formattedTime, "1970", 4) == 0)){
+    logFile(SD, "/power.txt", pv_power*0.1, load_power, flatten_power, formattedTime);
+    
+    strncpy(subString, formattedTime + 14, 2);
+    subString[2] = '\0';
+    int intValue = atoi(subString);
+
+    countHistory --;
+    Serial.println(countHistory);
+    if (intValue % 10 == 0 && countHistory < 0){
+      // 提取 formattedTime 中的前10個字元
+      strncpy(date, formattedTime, 10);
+      date[10] = '\0';  // 在字串末尾加上結束符號
+
+      // 在字串的最前面加入 "/"
+      char tempString[12] = "/";
+      strcat(tempString, date);
+      strcpy(date, tempString);
+
+      Serial.println(date);
+      
+      logHistory(SD, date, pv_power*0.1, load_power, flatten_power, formattedTime);
+      countHistory = 60;
+    }
+  }
     
   delay(1000);                     // Pulling interval
   
