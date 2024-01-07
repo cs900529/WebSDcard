@@ -50,3 +50,5 @@ append：appendFile             // 繼續寫入檔案 (格式為：append "filen
 cat：readFile                  // 讀檔 (格式為：cat "filename")
 rm：deleteFile                 // 刪除檔案 (格式為：rm "filename")
 ```
+
+### web 資料夾中有 index.html 也就是 esp32 讓使用者讀取數據資料及操作儲能系統的網頁介面
