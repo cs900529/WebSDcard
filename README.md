@@ -11,20 +11,24 @@ SD Card  |  ESP32
    GND       GND
 ```
 ### step 2. set your own Modbus Hreg Offset in file WebSDcard.ino#L26
+
 ```
 const int PV_REG = 0;
 const int LOAD_REG = 0;
 const int OUTPUT_POWER_REG = 0;
 const int DEMAND_REG = 0;
 ```
+
 ### step 3. set Address of Modbus Slave device in WebSDcard.ino#L37
 
 IPAddress remote(0, 0, 0, 0);
 
 ### step 4. set wifi in WebSDcard.ino#L48
 
+```
 const char *ssid = ""; // Your wifi ssid
 const char *password = ""; // Your wifi ssid
+```
 
 ### step 5. start the process and open the Serial Monitor. 
 you will see the esp32 ip address on Serial Monitor (it shoud be 192.168.xxx.xxx determined by the internet DHCP)
