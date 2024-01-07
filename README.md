@@ -1,6 +1,6 @@
-# h1基於ESP32微控制器之能源管理系統建置
+# 基於ESP32微控制器之能源管理系統建置
 
-### h2step 1. Connect the SD card to the following pins:
+### step 1. Connect the SD card to the following pins:
 ```
 SD Card  |  ESP32
    CS        10
@@ -21,7 +21,7 @@ const int DEMAND_REG = 0;
 
 ### step 3. set Address of Modbus Slave device in WebSDcard.ino#L37
 
-IPAddress remote(0, 0, 0, 0);
+```IPAddress remote(0, 0, 0, 0);```
 
 ### step 4. set wifi in WebSDcard.ino#L48
 
