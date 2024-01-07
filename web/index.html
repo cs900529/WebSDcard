@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POWER SYSTEM</title>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        #chart-container {
+            width: 95%; /* 讓框隨著父元素的寬度縮放 */
+            height: 50%;
+            margin: 0 auto; /* 自動將框置中 */
+            overflow: hidden; /* 超出框的部分隱藏 */
+        }
+    
+        #lineChart {
+            width: 100%; /* 讓折線圖填滿父元素的寬度 */
+        }
+    </style>
+    
+</head>
+<body>
+    <h1>POWER SYSTEM</h1>
+    <div id="chart-container">
+        <canvas id="lineChart" height="500"></canvas>
+    </div>
+    <br>
+    <button id="Demand_Enable">Demand_Enable</button>
+    <button id="Flatten_Enable">Flatten_Enable</button>
+    <button id="disable">Disable_ALL</button>
+    <button id="buttonR">Update_NOW</button>
+    <div id="log-content"></div>
+    <script>
+        $(document).ready(function() {
+            performButtonClick();
+        });
+
+        $('#buttonR').click(function() {
+            performButtonClick()
+        });
+
+        $('#Demand_Enable').click(function() {
+            $.get('/ModbusDemand');
+        });
+
+        $('#Flatten_Enable').click(function() {
+            $.get('/ModbusFlatten');
+        });
+
+        $('#disable').click(function() {
+            $.get('/ModbusDisable');
+        });
+
+        // 設定每隔幾秒執行一次
+        var interval = 2000;
+
+        // 定義一個函式來處理按鈕點擊
+        function performButtonClick() {
+            $.get('/read_log', function(data) {
+                // 解析日期及數據
+                var lines = data.split('\n');
+                var labels = [];
+                var values1 = [];
+                var values2 = [];
+                var values3 = [];
+
+                for (var i = 0; i < lines.length; i++) {
+                    var parts = lines[i].split(' - ');
+                    if (parts.length === 4) {
+                        labels.push(parts[0]);
+                        values1.push(parseInt(parts[1]));
+                        values2.push(parseInt(parts[2]));
+                        values3.push(parseInt(parts[3]));
+                    }
+                }
+
+                console.log('date:', labels);
+                console.log('pv_power:', values1);
+                console.log('load_power:', values2);
+                console.log('flatten_power:', values3);
+
+                // 繪製折線圖
+                updateLineChart(labels, values1, values2, values3);
+                $('#log-content').html(data.replace(/\n/g, '<br>'));
+            });
+        }
+
+        // 繪製或更新折線圖的函數
+        function updateLineChart(labels, values1, values2, values3) {
+            if (!window.myLineChart) {
+                // 如果圖表尚未初始化，則初始化它
+                initLineChart(labels, values1, values2, values3);
+            } else {
+                // 如果圖表已經初始化，則更新資料集
+                window.myLineChart.data.labels = labels;
+                window.myLineChart.data.datasets[0].data = values1;
+                window.myLineChart.data.datasets[1].data = values2;
+                window.myLineChart.data.datasets[2].data = values3;
+                window.myLineChart.update();
+            }
+        }
+
+        // 初始化折線圖的函數
+        function initLineChart(labels, values1, values2, values3) {
+            var ctx = document.getElementById('lineChart').getContext('2d');
+            window.myLineChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'pv_power',
+                            data: values1,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1,
+                            fill: false
+                        },
+                        {
+                            label: 'load_power',
+                            data: values2,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1,
+                            fill: false
+                        },
+                        {
+                            label: 'flatten_power',
+                            data: values3,
+                            borderColor: 'rgba(99, 255, 132, 1)',
+                            borderWidth: 1,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'category',
+                            position: 'bottom'
+                        },
+                        y: {
+                            min: 0
+                        }
+                    }
+                }
+            });
+        }
+
+        // 設定定時執行
+        setInterval(performButtonClick, interval);
+
+    </script>
+</body>
+</html>
